@@ -76,7 +76,7 @@ rules:
 
 **Priority of evaluation:**
 
-1. Request header (`X-Mock-Scenario`)
+1. Request header (`X-MockHub-Scenario`)
 2. CLI/UI-selected scenario
 3. Auto-gen scenario (`auto-gen-500`)
 4. Default happy-path response
@@ -131,7 +131,7 @@ npx mock-hub run --source ./scenarios --scenario auto-gen-500
 **Header override (for CI / automation):**
 
 ```
-X-Mock-Scenario: PartnerDown
+X-MockHub-Scenario: PartnerDown
 ```
 
 - Takes highest priority
@@ -181,7 +181,7 @@ Endpoints follow scenario rules.
 Launch `--ui` → switch active scenario in terminal.
 
 **Header override (CI):**
-Add `X-Mock-Scenario` per request → overrides scenario and default behavior.
+Add `X-MockHub-Scenario` per request → overrides scenario and default behavior.
 
 **Auto-gen scenario:**
 

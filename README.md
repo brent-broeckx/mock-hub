@@ -82,7 +82,7 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
 ### Header override
 
 ```
-X-Mock-Scenario: PartnerDown
+X-MockHub-Scenario: PartnerDown
 ```
 
 ## TODO

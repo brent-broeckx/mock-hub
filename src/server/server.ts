@@ -20,7 +20,7 @@ export type ServerOptions = {
 const AUTO_GEN_PREFIX = 'auto-gen-';
 
 const getHeaderScenario = (headers: FastifyRequest['headers']): string | undefined => {
-  const value = headers['x-mock-scenario'];
+  const value = headers['x-mockhub-scenario'];
   if (Array.isArray(value)) return value[0];
   return value;
 };
