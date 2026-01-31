@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Box, Text, render } from 'ink';
-import SelectInput from 'ink-select-input';
+import React, { useMemo, useState } from "react";
+import { Box, Text, render } from "ink";
+import SelectInput from "ink-select-input";
 
 type SelectItem<T> = {
+  key?: string;
   label: string;
   value: T;
 };
@@ -19,12 +20,13 @@ export const startScenarioUI = (
 
     const items = useMemo<SelectItem<ScenarioChoice>[]>(() => {
       const base: SelectItem<ScenarioChoice>[] = [
-        { label: 'Happy Path (default)', value: undefined },
-        { label: 'auto-gen-500', value: 'auto-gen-500' },
-        { label: 'auto-gen-503', value: 'auto-gen-503' },
+        { key: "happy-path", label: "Happy Path (default)", value: undefined },
+        { key: "auto-gen-500", label: "auto-gen-500", value: "auto-gen-500" },
+        { key: "auto-gen-503", label: "auto-gen-503", value: "auto-gen-503" },
       ];
 
       const custom = scenarios.map<SelectItem<ScenarioChoice>>((scenario) => ({
+        key: scenario,
         label: scenario,
         value: scenario,
       }));
@@ -46,7 +48,7 @@ export const startScenarioUI = (
           )}
         />
         <Box marginTop={1}>
-          <Text>Active: {selected ?? 'Happy Path'}</Text>
+          <Text>Active: {selected ?? "Happy Path"}</Text>
         </Box>
       </Box>
     );

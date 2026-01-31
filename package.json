@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsup src/cli/index.ts --out-dir dist --format esm --platform node --sourcemap",
-    "dev": "tsx src/cli/index.ts run --spec ./scenarios/examples/default/openapi.yaml --source ./scenarios/examples/default/scenarios --scenario PartnerDown --ui",
+    "dev": "tsx src/cli/index.ts run --spec ./scenarios/examples/default/openapi.yaml --source ./scenarios/examples/default/scenarios --scenario PartnerDown --ui --logging",
     "start": "node dist/cli.js run"
   },
   "dependencies": {

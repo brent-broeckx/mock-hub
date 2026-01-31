@@ -7,6 +7,7 @@ import {
   validateScenarioSet,
   ValidationError,
 } from './validation';
+import { EventLogger } from '../logging/event-logger';
 
 const isMockFile = (name: string): boolean => name.toLowerCase().endsWith('.yaml');
 
@@ -26,13 +27,25 @@ const readDirRecursive = async (dir: string): Promise<string[]> => {
   return files;
 };
 
-export const loadScenarios = async (sourceDir?: string): Promise<LoadedScenario[]> => {
+export const loadScenarios = async (
+  sourceDir?: string,
+  eventLogger?: EventLogger
+): Promise<LoadedScenario[]> => {
   if (!sourceDir) {
+    eventLogger?.emitEvent({
+      event: 'scenarios-discovered',
+      scenarios: [],
+    });
     return [];
   }
 
   const files = await readDirRecursive(sourceDir);
-  const scenarioFiles = files.filter((file) => isMockFile(file));
+  const scenarioFiles = files.filter((file) => isMockFile(file)).sort();
+
+  eventLogger?.emitEvent({
+    event: 'config-files',
+    files: scenarioFiles,
+  });
 
   const scenarios: LoadedScenario[] = [];
   const validationErrors: ValidationError[] = [];
@@ -41,9 +54,31 @@ export const loadScenarios = async (sourceDir?: string): Promise<LoadedScenario[
     const result = await validateScenarioFile(filePath);
 
     if (result.errors.length > 0) {
+      const sortedErrors = [...result.errors].sort((a, b) =>
+        `${a.path}:${a.message}`.localeCompare(`${b.path}:${b.message}`)
+      );
+      eventLogger?.emitEvent({
+        event: 'validation-file',
+        file: filePath,
+        result: 'failed',
+        errors: sortedErrors.map((error) => ({
+          path: error.path,
+          message: error.message,
+          severity: error.severity,
+          ruleId: error.ruleId,
+          line: error.line,
+          column: error.column,
+        })),
+      });
       validationErrors.push(...result.errors);
       continue;
     }
+
+    eventLogger?.emitEvent({
+      event: 'validation-file',
+      file: filePath,
+      result: 'ok',
+    });
 
     if (result.scenario) {
       scenarios.push({
@@ -58,13 +93,19 @@ export const loadScenarios = async (sourceDir?: string): Promise<LoadedScenario[
     validationErrors.push(...validateScenarioSet(scenarios, sourceDir));
   }
 
+  eventLogger?.emitEvent({
+    event: 'scenarios-discovered',
+    scenarios: scenarios.map((scenario) => scenario.scenario).sort(),
+  });
+
   const errorList = validationErrors.filter((entry) => entry.severity === 'error');
   const warningList = validationErrors.filter((entry) => entry.severity === 'warning');
 
-  if (warningList.length > 0) {
-    // eslint-disable-next-line no-console
-    console.warn(formatValidationErrors(warningList));
-  }
+  eventLogger?.emitEvent({
+    event: 'validation-summary',
+    errors: errorList.length,
+    warnings: warningList.length,
+  });
 
   if (errorList.length > 0) {
     throw new Error(formatValidationErrors(errorList));

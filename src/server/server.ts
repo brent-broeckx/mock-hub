@@ -5,9 +5,9 @@ import { LoadedScenario } from '../scenarios/types';
 import { findMatchingRule } from '../rules/matcher';
 import { generateHappyPathResponse } from '../responses/generator';
 import { ScenarioState } from '../state/scenario-state';
-import { createLogger, Logger } from '../utils/logger';
 import { resolveFrom } from '../utils/path';
 import { sleep } from '../utils/sleep';
+import { EventLogger } from '../logging/event-logger';
 
 export type ServerOptions = {
   routes: ApiRoute[];
@@ -15,6 +15,7 @@ export type ServerOptions = {
   scenarioState: ScenarioState;
   port: number;
   verbose?: boolean;
+  eventLogger: EventLogger;
 };
 
 const AUTO_GEN_PREFIX = 'auto-gen-';
@@ -47,7 +48,6 @@ const buildScenarioMap = (scenarios: LoadedScenario[]): Map<string, LoadedScenar
 };
 
 export const createServer = (options: ServerOptions): FastifyInstance => {
-  const logger = createLogger('mock-hub', options.verbose ?? false);
   const server = Fastify({ logger: false });
   const scenarioMap = buildScenarioMap(options.scenarios);
 
@@ -59,29 +59,68 @@ export const createServer = (options: ServerOptions): FastifyInstance => {
     const headerScenario = getHeaderScenario(request.headers);
     const activeScenario = options.scenarioState.get();
     const scenarioName = headerScenario ?? activeScenario;
+    const requestPath = request.url.split('?')[0];
+    const querySnapshot = Object.fromEntries(
+      Object.entries(request.query as Record<string, unknown>).map(([key, value]) => [
+        key,
+        value === undefined || value === null ? '' : String(value),
+      ])
+    );
+    const headerKeys = Object.keys(request.headers).map((key) => key.toLowerCase()).sort();
 
     const autoGenStatus = parseAutoGenStatus(scenarioName);
     const loadedScenario = scenarioName ? scenarioMap.get(scenarioName) : undefined;
 
-    if (scenarioName && !autoGenStatus && !loadedScenario) {
-      logger.warn(`Scenario "${scenarioName}" not found. Falling back to happy path.`);
-    }
+    options.eventLogger.emitEvent({
+      event: 'scenario-resolution',
+      method: request.method,
+      path: requestPath,
+      headerScenario: headerScenario ?? undefined,
+      activeScenario: activeScenario ?? undefined,
+      result: headerScenario ? 'header' : activeScenario ? 'active' : 'none',
+      action: autoGenStatus ? 'auto-gen' : loadedScenario ? 'scenario' : 'passthrough',
+      scenarioId: loadedScenario?.scenario,
+    });
 
     if (loadedScenario) {
-      const match = findMatchingRule(loadedScenario.rules, {
-        method: request.method,
-        path: request.url.split('?')[0],
-        headers: request.headers,
-        query: request.query as Record<string, unknown>,
-      });
+      const match = findMatchingRule(
+        loadedScenario.rules,
+        {
+          method: request.method,
+          path: requestPath,
+          headers: request.headers,
+          query: request.query as Record<string, unknown>,
+        },
+        ({ rule, ruleIndex, result }) => {
+          options.eventLogger.emitEvent({
+            event: 'rule-evaluated',
+            scenarioId: loadedScenario.scenario,
+            ruleIndex,
+            ruleId: rule.id,
+            request: {
+              method: request.method,
+              path: requestPath,
+              query: querySnapshot,
+              headers: headerKeys,
+            },
+            result: result.matched ? 'matched' : 'not-matched',
+            reason: result.reason,
+          });
+        }
+      );
 
       if (match) {
-        const { respond } = match;
+        const { respond } = match.rule;
 
         if (respond.timeout !== undefined) {
           // TODO: Support configurable timeout behaviors beyond fixed 504.
           await sleep(respond.timeout);
           reply.code(504).send({ message: 'Mock timeout' });
+          options.eventLogger.emitEvent({
+            event: 'execution-complete',
+            source: 'timeout',
+            status: 504,
+          });
           return;
         }
 
@@ -98,17 +137,38 @@ export const createServer = (options: ServerOptions): FastifyInstance => {
         }
 
         reply.code(respond.status).send(body ?? undefined);
+        options.eventLogger.emitEvent({
+          event: 'scenario-matched',
+          scenarioId: loadedScenario.scenario,
+          ruleIndex: match.ruleIndex,
+          ruleId: match.rule.id,
+        });
+        options.eventLogger.emitEvent({
+          event: 'execution-complete',
+          source: 'scenario',
+          status: respond.status,
+        });
         return;
       }
     }
 
     if (autoGenStatus) {
       reply.code(autoGenStatus).send();
+      options.eventLogger.emitEvent({
+        event: 'execution-complete',
+        source: 'auto-gen',
+        status: autoGenStatus,
+      });
       return;
     }
 
     const generated = generateHappyPathResponse(route.responses);
     reply.code(generated.status).send(generated.body ?? undefined);
+    options.eventLogger.emitEvent({
+      event: 'execution-complete',
+      source: 'happy-path',
+      status: generated.status,
+    });
   };
 
   for (const route of options.routes) {
@@ -120,16 +180,14 @@ export const createServer = (options: ServerOptions): FastifyInstance => {
     });
   }
 
-  server.addHook('onReady', async () => {
-    logger.info(`Routes loaded: ${options.routes.length}`);
-  });
-
   return server;
 };
 
 export const startServer = async (options: ServerOptions): Promise<void> => {
-  const logger = createLogger('mock-hub', options.verbose ?? false);
   const server = createServer(options);
   await server.listen({ port: options.port, host: '0.0.0.0' });
-  logger.info(`Mock Hub running on http://localhost:${options.port}`);
+  options.eventLogger.emitEvent({
+    event: 'server-ready',
+    port: options.port,
+  });
 };

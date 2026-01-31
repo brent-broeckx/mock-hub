@@ -5,7 +5,7 @@ import { loadScenarios } from '../scenarios/loader';
 import { startServer } from '../server/server';
 import { ScenarioState } from '../state/scenario-state';
 import { startScenarioUI } from '../ui/scenario-ui';
-import { createLogger } from '../utils/logger';
+import { createEventLogger, createNullEventLogger, LogMode } from '../logging/event-logger';
 
 const program = new Command();
 
@@ -21,6 +21,7 @@ program
   .option('--source <dir>', 'Directory containing .yaml scenario files')
   .option('--scenario <name>', 'Active scenario name')
   .option('--ui', 'Interactive scenario selector', false)
+  .option('--logging', 'Emit deterministic JSONL logs', false)
   .option('--port <number>', 'Server port', '4010')
   .option('--verbose', 'Verbose logging', false)
   .action(
@@ -29,18 +30,27 @@ program
       source?: string;
       scenario?: string;
       ui?: boolean;
+      logging?: boolean;
       port?: string;
       verbose?: boolean;
     }) => {
     const port = Number(options.port);
-    const logger = createLogger('mock-hub', options.verbose);
+    const mode: LogMode = options.ui ? 'ui' : process.env.CI ? 'ci' : 'cli';
+    const eventLogger = options.logging ? createEventLogger({ mode }) : createNullEventLogger();
 
     try {
       const spec = await loadOpenApiSpec(options.spec);
       const routes = extractRoutes(spec);
-      const scenarios = await loadScenarios(options.source);
+      const scenarios = await loadScenarios(options.source, eventLogger);
 
-      logger.info(`Loaded ${scenarios.length} scenario file(s).`);
+      eventLogger.emitEvent({
+        event: 'startup',
+        mode,
+        spec: options.spec,
+        sourceDir: options.source,
+        ui: Boolean(options.ui),
+        port,
+      });
 
       const scenarioState = new ScenarioState();
       scenarioState.set(options.scenario);
@@ -59,9 +69,14 @@ program
         scenarioState,
         port,
         verbose: options.verbose,
+        eventLogger,
       });
     } catch (error) {
-      logger.error('Failed to start mock server.', error);
+      const message = error instanceof Error ? error.message : 'Unknown startup error';
+      eventLogger.emitEvent({
+        event: 'startup-failed',
+        message,
+      });
       process.exitCode = 1;
     }
     }
