@@ -1,69 +1,36 @@
 # Integration Mock Hub
 
-Lightweight, local-first OpenAPI mock server with scenario overrides.
+OpenAPI-first mock server with deterministic scenario overrides and strict validation.
 
-## Project structure
-
-```
-.
-├── src
-│   ├── cli
-│   │   └── index.ts
-│   ├── openapi
-│   │   ├── parser.ts
-│   │   └── types.ts
-│   ├── responses
-│   │   └── generator.ts
-│   ├── rules
-│   │   └── matcher.ts
-│   ├── scenarios
-│   │   ├── loader.ts
-│   │   └── types.ts
-│   ├── server
-│   │   └── server.ts
-│   ├── state
-│   │   └── scenario-state.ts
-│   ├── ui
-│   │   └── scenario-ui.tsx
-│   └── utils
-│       ├── logger.ts
-│       ├── path.ts
-│       └── sleep.ts
-├── scenarios
-│   ├── partner-down.yaml
-│   └── responses
-│       └── partner_down.json
-├── package.json
-└── tsconfig.json
-```
-
-## Usage
-
-### Install deps
+## Install
 
 ```bash
-npm install
+npm i -D mock-hub
 ```
 
-### Local run (dev)
+Or run without installing:
 
 ```bash
-npm run dev -- --spec ./openapi.yaml --source ./scenarios
+npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ```
 
-### Build
+## Quick start
+
+1. Create an OpenAPI spec (example: [openapi.yaml](openapi.yaml)).
+2. Create a scenarios directory (example: [scenarios](scenarios)).
+3. Run the server:
 
 ```bash
-npm run build
+npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ```
 
-### Run built CLI
+## CLI usage
 
 ```bash
-node dist/cli.js run --spec ./openapi.yaml --source ./scenarios
+mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--port <number>] [--verbose]
 ```
 
-### npx usage
+Examples:
 
 ```bash
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
@@ -72,22 +39,101 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario auto-gen-
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
 ```
 
-## Scenario rules
+## Scenario file example
 
-- `path` supports exact or wildcard (`/contracts/*`)
-- `headers` match exact value or existence
-- `query` match exact key/value
-- `method` optional
+Save as [scenarios/partner-down.yaml](scenarios/partner-down.yaml):
 
-### Header override
+```yaml
+scenario: PartnerDown
+version: 1.0.0
+description: Simulate partner API being unavailable
+rules:
+	- id: partner-down-get
+		match:
+			path: /contracts/*
+			method: GET
+			headers:
+				X-User-Type: premium
+		respond:
+			status: 503
+			bodyFile: responses/partner_down.json
+			delayMs: 500
+			headers:
+				Retry-After: "30"
+	- id: dryrun-validation
+		match:
+			path: /contracts
+			method: POST
+			query:
+				dryRun: "true"
+		respond:
+			status: 400
+			body:
+				error: "Dry-run validation failed"
+				code: "VALIDATION_ERROR"
+```
+
+## Header override
+
+Per-request override using `X-Mock-Scenario`:
 
 ```
-X-MockHub-Scenario: PartnerDown
+X-Mock-Scenario: PartnerDown
 ```
 
-## TODO
+## Validation behavior (strict)
 
-- Stateful mocks with request history
-- Complex rule matching (regex, JSON body matching)
-- UI editing and inline rule changes
-- Scenario hot reload via file watcher
+Validation happens before any scenario execution. Invalid files fail fast with precise errors.
+
+### YAML-level
+
+- Syntax errors are rejected with file and line/column.
+- Duplicate keys are rejected.
+- Only known root keys are allowed.
+
+### Schema-level
+
+- No additional properties allowed.
+- Required fields must exist.
+- Arrays like `rules` must be non-empty.
+- Rule `id` values must be unique within a file.
+
+### Semantic checks
+
+- HTTP status must be $100$–$599$.
+- HTTP method must be valid (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD).
+- `path` must start with `/` and may include at most one `*` wildcard.
+- `body` and `bodyFile` are mutually exclusive.
+- `delayMs`/`timeout` must be non-negative.
+- `version` must match `x.y.z`.
+
+### Cross-scenario checks
+
+- Scenario names must be unique.
+- Reserved scenario names (prefix `auto-gen-`) are rejected.
+
+### Error output example
+
+```
+ERROR scenarios/auth.yaml:12:4
+ ○ payment-failure: rules[0].match.method
+	 → "FETCH" is not a valid HTTP method
+```
+
+## Project structure
+
+```
+.
+├── src
+│   ├── cli
+│   ├── openapi
+│   ├── responses
+│   ├── rules
+│   ├── scenarios
+│   ├── server
+│   ├── state
+│   ├── ui
+│   └── utils
+├── scenarios
+└── openapi.yaml
+```
