@@ -1,0 +1,26 @@
+scenario: auto-gen-500
+version: 1.0
+extraRootKey: true
+rules:
+  - id: payment-failure
+    match:
+      path: payments
+      method: FETCH
+      headers:
+        X-Env: 1
+    respond:
+      status: 99
+      body: {}
+      bodyFile: responses/payment_failed.json
+      delayMs: -5
+      timeout: -10
+      headers:
+        Retry-After: 10
+  - id: payment-failure
+    match:
+      path: /payments
+      method: POST
+      query:
+        dryRun: true
+    respond:
+      status: "400"

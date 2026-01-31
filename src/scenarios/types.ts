@@ -24,6 +24,7 @@ export type ScenarioRespond = {
 };
 
 export type ScenarioRule = {
+  id?: string;
   match: ScenarioMatch;
   respond: ScenarioRespond;
 };
@@ -31,6 +32,7 @@ export type ScenarioRule = {
 export type ScenarioFile = {
   scenario: string;
   description?: string;
+  version?: string;
   rules: ScenarioRule[];
 };
 

@@ -1,0 +1,27 @@
+scenario: ValidationHappy
+version: 1.0.0
+description: Valid scenario used for validation tests
+rules:
+  - id: payment-failure
+    match:
+      path: /payments/*
+      method: GET
+      headers:
+        X-Env: test
+    respond:
+      status: 503
+      bodyFile: responses/payment_failed.json
+      delayMs: 250
+      headers:
+        Retry-After: "10"
+  - id: payment-dryrun
+    match:
+      path: /payments
+      method: POST
+      query:
+        dryRun: "true"
+    respond:
+      status: 400
+      body:
+        error: "Dry-run validation failed"
+        code: "VALIDATION_ERROR"

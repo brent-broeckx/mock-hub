@@ -1,7 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import yaml from 'js-yaml';
-import { LoadedScenario, ScenarioFile } from './types';
+import { LoadedScenario } from './types';
+import {
+  formatValidationErrors,
+  validateScenarioFile,
+  validateScenarioSet,
+  ValidationError,
+} from './validation';
 
 const isMockFile = (name: string): boolean => name.toLowerCase().endsWith('.yaml');
 
@@ -26,20 +31,39 @@ export const loadScenarios = async (sourceDir: string): Promise<LoadedScenario[]
   const scenarioFiles = files.filter((file) => isMockFile(file));
 
   const scenarios: LoadedScenario[] = [];
+  const validationErrors: ValidationError[] = [];
 
   for (const filePath of scenarioFiles) {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const data = yaml.load(content) as ScenarioFile;
+    const result = await validateScenarioFile(filePath);
 
-    if (!data || !data.scenario || !Array.isArray(data.rules)) {
-      throw new Error(`Invalid scenario file: ${filePath}`);
+    if (result.errors.length > 0) {
+      validationErrors.push(...result.errors);
+      continue;
     }
 
-    scenarios.push({
-      ...data,
-      sourcePath: filePath,
-      sourceDir,
-    });
+    if (result.scenario) {
+      scenarios.push({
+        ...result.scenario,
+        sourcePath: filePath,
+        sourceDir,
+      });
+    }
+  }
+
+  if (scenarios.length > 0) {
+    validationErrors.push(...validateScenarioSet(scenarios, sourceDir));
+  }
+
+  const errorList = validationErrors.filter((entry) => entry.severity === 'error');
+  const warningList = validationErrors.filter((entry) => entry.severity === 'warning');
+
+  if (warningList.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(formatValidationErrors(warningList));
+  }
+
+  if (errorList.length > 0) {
+    throw new Error(formatValidationErrors(errorList));
   }
 
   return scenarios;
