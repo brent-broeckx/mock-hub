@@ -21,7 +21,7 @@ program
   .option('--source <dir>', 'Directory containing .yaml scenario files')
   .option('--scenario <name>', 'Active scenario name')
   .option('--ui', 'Interactive scenario selector', false)
-  .option('--logging', 'Emit deterministic JSONL logs', false)
+  .option('--logging', 'Emit deterministic logs', false)
   .option('--port <number>', 'Server port', '4010')
   .option('--verbose', 'Verbose logging', false)
   .action(
@@ -30,13 +30,17 @@ program
       source?: string;
       scenario?: string;
       ui?: boolean;
+      showLog?: boolean;
       logging?: boolean;
       port?: string;
       verbose?: boolean;
     }) => {
     const port = Number(options.port);
     const mode: LogMode = options.ui ? 'ui' : process.env.CI ? 'ci' : 'cli';
-    const eventLogger = options.logging ? createEventLogger({ mode }) : createNullEventLogger();
+    const shouldLog = Boolean(options.showLog || options.logging);
+    const eventLogger = shouldLog
+      ? createEventLogger({ mode, format: mode === 'ci' ? 'jsonl' : 'pretty' })
+      : createNullEventLogger();
 
     try {
       const spec = await loadOpenApiSpec(options.spec);

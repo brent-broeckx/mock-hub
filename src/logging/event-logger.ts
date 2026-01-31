@@ -88,6 +88,7 @@ export type EventLogger = {
 
 export type EventLoggerOptions = {
   mode: LogMode;
+  format?: 'jsonl' | 'pretty';
   stream?: NodeJS.WritableStream;
 };
 
@@ -114,13 +115,122 @@ const stableStringify = (value: unknown): string => {
   return `{${body}}`;
 };
 
-export const createEventLogger = ({ mode, stream }: EventLoggerOptions): EventLogger => {
+export const createEventLogger = ({ mode, stream, format }: EventLoggerOptions): EventLogger => {
   const emitter = new EventEmitter();
   const output = stream ?? (mode === 'ui' ? process.stderr : process.stdout);
+  const activeFormat = format ?? (mode === 'ci' ? 'jsonl' : stream ? 'jsonl' : 'pretty');
+
+  const colors = {
+    reset: '\u001b[0m',
+    green: '\u001b[32m',
+    red: '\u001b[31m',
+    lightBlue: '\u001b[94m',
+  };
+
+  const colorizeLine = (line: string): string => {
+    if (activeFormat !== 'pretty' || mode === 'ci') {
+      return line;
+    }
+
+    if (line.startsWith('✔')) {
+      return `${colors.green}${line}${colors.reset}`;
+    }
+
+    if (line.startsWith('✖')) {
+      return `${colors.red}${line}${colors.reset}`;
+    }
+
+    if (line.startsWith('▶') || line.startsWith('○')) {
+      return `${colors.lightBlue}${line}${colors.reset}`;
+    }
+
+    return line;
+  };
+
+  const formatPretty = (event: LogEvent): string => {
+    switch (event.event) {
+      case 'startup':
+        return [
+          '▶ Startup',
+          ` ○ mode=${event.mode}`,
+          ` ○ spec=${event.spec}`,
+          ` ○ source=${event.sourceDir ?? 'none'}`,
+          ` ○ ui=${event.ui}`,
+          ` ○ port=${event.port}`,
+        ].map(colorizeLine).join('\n');
+      case 'startup-failed':
+        return [
+          '✖ Startup failed',
+          ` ○ message=${event.message}`,
+        ].map(colorizeLine).join('\n');
+      case 'config-files':
+        return [
+          '▶ Config files',
+          ` ○ count=${event.files.length}`,
+        ].map(colorizeLine).join('\n');
+      case 'validation-file':
+        return [
+          '▶ Validation file',
+          ` ○ file=${event.file}`,
+          ` ○ result=${event.result}`,
+        ].map(colorizeLine).join('\n');
+      case 'validation-summary':
+        return [
+          '▶ Validation summary',
+          ` ○ errors=${event.errors}`,
+          ` ○ warnings=${event.warnings}`,
+        ].map(colorizeLine).join('\n');
+      case 'scenarios-discovered':
+        return [
+          '▶ Scenarios discovered',
+          ` ○ count=${event.scenarios.length}`,
+        ].map(colorizeLine).join('\n');
+      case 'scenario-resolution':
+        return [
+          '▶ Scenario resolution',
+          ` ○ method=${event.method}`,
+          ` ○ path=${event.path}`,
+          ` ○ result=${event.result}`,
+          ` ○ action=${event.action}`,
+          ` ○ scenario=${event.scenarioId ?? 'none'}`,
+        ].map(colorizeLine).join('\n');
+      case 'rule-evaluated':
+        return [
+          `${event.result === 'matched' ? '✔' : '✖'} Rule evaluated`,
+          ` ○ scenario=${event.scenarioId}`,
+          ` ○ ruleIndex=${event.ruleIndex}`,
+          ` ○ ruleId=${event.ruleId ?? 'none'}`,
+          ` ○ method=${event.request.method}`,
+          ` ○ path=${event.request.path}`,
+          ` ○ result=${event.result}`,
+          ` ○ reason=${event.reason ?? 'none'}`,
+        ].map(colorizeLine).join('\n');
+      case 'scenario-matched':
+        return [
+          '✔ Matched rule',
+          ` ○ scenario=${event.scenarioId}`,
+          ` ○ ruleIndex=${event.ruleIndex}`,
+          ` ○ ruleId=${event.ruleId ?? 'none'}`,
+        ].map(colorizeLine).join('\n');
+      case 'execution-complete':
+        return [
+          '▶ Execution complete',
+          ` ○ source=${event.source}`,
+          ` ○ status=${event.status}`,
+        ].map(colorizeLine).join('\n');
+      case 'server-ready':
+        return [
+          '▶ Server ready',
+          ` ○ port=${event.port}`,
+        ].map(colorizeLine).join('\n');
+      default:
+        return stableStringify(event);
+    }
+  };
 
   const emitEvent = (event: LogEvent) => {
     emitter.emit('event', event);
-    const line = stableStringify(event);
+    const line = activeFormat === 'jsonl' ? stableStringify(event) : formatPretty(event);
     output.write(`${line}\n`);
   };
 
