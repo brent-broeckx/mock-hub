@@ -26,7 +26,11 @@ const readDirRecursive = async (dir: string): Promise<string[]> => {
   return files;
 };
 
-export const loadScenarios = async (sourceDir: string): Promise<LoadedScenario[]> => {
+export const loadScenarios = async (sourceDir?: string): Promise<LoadedScenario[]> => {
+  if (!sourceDir) {
+    return [];
+  }
+
   const files = await readDirRecursive(sourceDir);
   const scenarioFiles = files.filter((file) => isMockFile(file));
 

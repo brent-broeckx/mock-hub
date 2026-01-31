@@ -18,7 +18,7 @@ program
   .command('run')
   .description('Start the mock server')
   .requiredOption('--spec <path>', 'Path to OpenAPI spec (json/yaml)')
-  .requiredOption('--source <dir>', 'Directory containing .yaml scenario files')
+  .option('--source <dir>', 'Directory containing .yaml scenario files')
   .option('--scenario <name>', 'Active scenario name')
   .option('--ui', 'Interactive scenario selector', false)
   .option('--port <number>', 'Server port', '4010')
@@ -26,7 +26,7 @@ program
   .action(
     async (options: {
       spec: string;
-      source: string;
+      source?: string;
       scenario?: string;
       ui?: boolean;
       port?: string;
