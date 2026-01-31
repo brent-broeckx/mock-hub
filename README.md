@@ -8,16 +8,23 @@ OpenAPI-first mock server with deterministic scenario overrides and strict valid
 npm i -D mock-hub
 ```
 
-Or run without installing:
+Run without installing:
 
 ```bash
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ```
 
+Global install:
+
+```bash
+npm i -g mock-hub
+mock-hub run --spec ./openapi.yaml --source ./scenarios
+```
+
 ## Quick start
 
 1. Create an OpenAPI spec (example: [openapi.yaml](openapi.yaml)).
-2. (optional) Create a scenarios directory (example: [scenarios](scenarios)).
+2. Create a scenarios directory (example: [scenarios](scenarios)).
 3. Run the server:
 
 ```bash
@@ -27,7 +34,7 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ## CLI usage
 
 ```bash
-mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
+mock-hub run --spec <path> [--source <dir>] [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
 ```
 
 ### CLI options
@@ -36,17 +43,22 @@ mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--logging]
 - `--source <dir>`: Directory containing `.yaml` scenario files. Optional; if omitted, happy-path responses are used.
 - `--scenario <name>`: Default scenario name to apply when no header override is provided.
 - `--ui`: Launch interactive scenario selector (Ink).
-- `--logging`: Enable deterministic logs (pretty in CLI/UI, JSONL in CI)..
+- `--logging`: Enable deterministic logs (pretty in CLI/UI, JSONL in CI).
 - `--port <number>`: Port to run the mock server (default: 4010).
 
-Examples:
+### Examples
 
 ```bash
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown
-npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario auto-gen-500
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --logging
+```
+
+CI usage:
+
+```bash
+CI=1 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --show-log
 ```
 
 ## Scenario file example
@@ -58,29 +70,29 @@ scenario: PartnerDown
 version: 1.0.0
 description: Simulate partner API being unavailable
 rules:
-	- id: partner-down-get
-		match:
-			path: /contracts/*
-			method: GET
-			headers:
-				X-User-Type: premium
-		respond:
-			status: 503
-			bodyFile: responses/partner_down.json
-			delayMs: 500
-			headers:
-				Retry-After: "30"
-	- id: dryrun-validation
-		match:
-			path: /contracts
-			method: POST
-			query:
-				dryRun: "true"
-		respond:
-			status: 400
-			body:
-				error: "Dry-run validation failed"
-				code: "VALIDATION_ERROR"
+  - id: partner-down-get
+    match:
+      path: /contracts/*
+      method: GET
+      headers:
+        X-User-Type: premium
+    respond:
+      status: 503
+      bodyFile: responses/partner_down.json
+      delayMs: 500
+      headers:
+        Retry-After: "30"
+  - id: dryrun-validation
+    match:
+      path: /contracts
+      method: POST
+      query:
+        dryRun: "true"
+    respond:
+      status: 400
+      body:
+        error: "Dry-run validation failed"
+        code: "VALIDATION_ERROR"
 ```
 
 ## Header override
@@ -90,6 +102,11 @@ Per-request override using `X-MockHub-Scenario`:
 ```
 X-MockHub-Scenario: PartnerDown
 ```
+
+## Configuration locations
+
+- OpenAPI spec: `--spec <path>` (YAML or JSON).
+- Scenarios directory: `--source <dir>` containing `.yaml` files and optional `responses/` files.
 
 ## Validation behavior (strict)
 
@@ -127,10 +144,10 @@ Validation happens before any scenario execution. Invalid files fail fast with p
 ```
 ERROR scenarios/auth.yaml:12:4
  ○ payment-failure: rules[0].match.method
-	 → "FETCH" is not a valid HTTP method
+   → "FETCH" is not a valid HTTP method
 ```
 
-## Project structure
+## Project structure (recommended)
 
 ```
 .
@@ -143,7 +160,14 @@ ERROR scenarios/auth.yaml:12:4
 │   ├── server
 │   ├── state
 │   ├── ui
-│   └── utils
+│   └── ...
+├── dist
 ├── scenarios
 └── openapi.yaml
 ```
+
+## Publishing
+
+- Builds output to `dist/` only
+- Uses ESM with Node >= 18.
+- `bin` points to `dist/cli.js` for `npx` and global usage.
