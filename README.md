@@ -75,10 +75,10 @@ rules:
 
 ## Header override
 
-Per-request override using `X-Mock-Scenario`:
+Per-request override using `X-MockHub-Scenario`:
 
 ```
-X-Mock-Scenario: PartnerDown
+X-MockHub-Scenario: PartnerDown
 ```
 
 ## Validation behavior (strict)
