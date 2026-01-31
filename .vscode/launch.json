@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Mock Hub (tsx)",
+      "type": "node",
+      "request": "launch",
+      "runtimeArgs": ["--inspect"],
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+      "args": ["src/cli/index.ts", "run", "--spec", "openapi.yaml", "--source", "scenarios",  "--scenario", "PartnerDown"],
+      "cwd": "${workspaceFolder}",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

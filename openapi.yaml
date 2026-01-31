@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Integration Mock Hub Sample API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4010
+paths:
+  /contracts:
+    get:
+      summary: List contracts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Contract"
+                  count:
+                    type: integer
+              examples:
+                success:
+                  value:
+                    items:
+                      - id: ctr_001
+                        status: active
+                        customerId: cust_123
+                        total: 99.5
+                    count: 1
+        "500":
+          description: Server error
+    post:
+      summary: Create a contract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+  /contracts/{contractId}:
+    get:
+      summary: Get contract by ID
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+        "404":
+          description: Not found
+  /partners:
+    get:
+      summary: List partners
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Partner"
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+components:
+  schemas:
+    Contract:
+      type: object
+      required: [id, status, customerId, total]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [active, pending, canceled]
+        customerId:
+          type: string
+        total:
+          type: number
+          format: float
+    ContractInput:
+      type: object
+      required: [customerId, total]
+      properties:
+        customerId:
+          type: string
+        total:
+          type: number
+          format: float
+    Partner:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        tier:
+          type: string
+          enum: [gold, silver, bronze]

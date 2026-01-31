@@ -1,0 +1,22 @@
+scenario: PartnerDown
+description: Simulate partner API being unavailable and validation errors
+rules:
+  - match:
+      path: /contracts/*
+      method: GET
+    respond:
+      status: 503
+      bodyFile: responses/partner_down.json
+      delayMs: 500
+      headers:
+        Retry-After: "30"
+  - match:
+      path: /contracts
+      method: POST
+      query:
+        dryRun: "true"
+    respond:
+      status: 400
+      body:
+        error: "Dry-run validation failed"
+        code: "VALIDATION_ERROR"

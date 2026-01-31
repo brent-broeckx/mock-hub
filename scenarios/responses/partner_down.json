@@ -1,0 +1,5 @@
+{
+  "error": "Partner API unavailable",
+  "code": "PARTNER_DOWN",
+  "message": "Please retry later"
+}
