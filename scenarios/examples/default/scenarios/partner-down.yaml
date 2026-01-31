@@ -6,7 +6,7 @@ rules:
       method: GET
     respond:
       status: 503
-      bodyFile: responses/partner_down.json
+      bodyFile: ../responses/partner_down.json
       delayMs: 500
       headers:
         Retry-After: "30"
