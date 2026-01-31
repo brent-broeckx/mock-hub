@@ -27,8 +27,18 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ## CLI usage
 
 ```bash
-mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--port <number>] [--verbose]
+mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
 ```
+
+### CLI options
+
+- `--spec <path>`: Path to OpenAPI spec (YAML or JSON). Required.
+- `--source <dir>`: Directory containing `.yaml` scenario files. Optional; if omitted, happy-path responses are used.
+- `--scenario <name>`: Default scenario name to apply when no header override is provided.
+- `--ui`: Launch interactive scenario selector (Ink).
+- `--logging`: Enable deterministic logs (pretty in CLI/UI, JSONL in CI)..
+- `--port <number>`: Port to run the mock server (default: 4010).
+- `--verbose`: Enables verbose internal logging (non-structured).
 
 Examples:
 
@@ -37,6 +47,7 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario auto-gen-500
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
+npx mock-hub run --spec ./openapi.yaml --source ./scenarios --logging
 ```
 
 ## Scenario file example
