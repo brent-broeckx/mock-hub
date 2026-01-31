@@ -1,7 +1,8 @@
 scenario: PartnerDown
 description: Simulate partner API being unavailable and validation errors
 rules:
-  - match:
+  - id: contracts-503
+    match:
       path: /contracts/*
       method: GET
     respond:
@@ -10,7 +11,8 @@ rules:
       delayMs: 500
       headers:
         Retry-After: "30"
-  - match:
+  - id: dryrun-400
+    match:
       path: /contracts
       method: POST
       query:
