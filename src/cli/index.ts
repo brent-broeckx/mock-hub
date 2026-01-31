@@ -23,6 +23,10 @@ program
   .option('--ui', 'Interactive scenario selector', false)
   .option('--logging', 'Emit deterministic logs', false)
   .option('--port <number>', 'Server port', '4010')
+  .addHelpText(
+    'after',
+    `\nExamples:\n  mock-hub run --spec ./openapi.yaml\n  mock-hub run --spec ./openapi.yaml --source ./scenarios\n  mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown\n  mock-hub run --spec ./openapi.yaml --source ./scenarios --ui\n`
+  )
   .action(
     async (options: {
       spec: string;

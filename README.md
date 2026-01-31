@@ -5,7 +5,7 @@ OpenAPI-first mock server with deterministic scenario overrides and strict valid
 ## Install
 
 ```bash
-npm i -D mock-hub
+npm i -D @brentbroeckx/mock-hub
 ```
 
 Run without installing:
@@ -17,13 +17,13 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 Global install:
 
 ```bash
-npm i -g mock-hub
+npm i -g @brentbroeckx/mock-hub
 mock-hub run --spec ./openapi.yaml --source ./scenarios
 ```
 
 ## Quick start
 
-1. Create an OpenAPI spec (example: [openapi.yaml](openapi.yaml)).
+1. Create an OpenAPI spec (example: [openapi.yaml](scenarios/examples/default/openapi.yaml)).
 2. Create a scenarios directory (example: [scenarios](scenarios)).
 3. Run the server:
 
@@ -35,6 +35,12 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 
 ```bash
 mock-hub run --spec <path> [--source <dir>] [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
+```
+
+Help:
+
+```bash
+mock-hub run --help
 ```
 
 ### CLI options
