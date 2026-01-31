@@ -23,7 +23,6 @@ program
   .option('--ui', 'Interactive scenario selector', false)
   .option('--logging', 'Emit deterministic logs', false)
   .option('--port <number>', 'Server port', '4010')
-  .option('--verbose', 'Verbose logging', false)
   .action(
     async (options: {
       spec: string;
@@ -33,7 +32,6 @@ program
       showLog?: boolean;
       logging?: boolean;
       port?: string;
-      verbose?: boolean;
     }) => {
     const port = Number(options.port);
     const mode: LogMode = options.ui ? 'ui' : process.env.CI ? 'ci' : 'cli';
@@ -72,7 +70,6 @@ program
         scenarios,
         scenarioState,
         port,
-        verbose: options.verbose,
         eventLogger,
       });
     } catch (error) {

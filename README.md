@@ -38,7 +38,6 @@ mock-hub run --spec <path> --source <dir> [--scenario <name>] [--ui] [--logging]
 - `--ui`: Launch interactive scenario selector (Ink).
 - `--logging`: Enable deterministic logs (pretty in CLI/UI, JSONL in CI)..
 - `--port <number>`: Port to run the mock server (default: 4010).
-- `--verbose`: Enables verbose internal logging (non-structured).
 
 Examples:
 

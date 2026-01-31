@@ -14,7 +14,6 @@ export type ServerOptions = {
   scenarios: LoadedScenario[];
   scenarioState: ScenarioState;
   port: number;
-  verbose?: boolean;
   eventLogger: EventLogger;
 };
 
