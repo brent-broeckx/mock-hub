@@ -160,6 +160,60 @@ X-MockHub-Scenario: PartnerDown
 - OpenAPI spec: `--spec <path>` (YAML or JSON).
 - Scenarios directory: `--source <dir>` containing `.yaml` files and optional `responses/` files.
 
+## Response templating (scenario responses only)
+
+Templating is supported only inside `respond.body` and `respond.bodyFile` (including nested objects/arrays) for scenario-defined responses. Templates are string-only and resolved per response generation.
+
+### Allowed helpers
+
+- `{{uuid}}` RFC 4122 v4 UUID (new value per response)
+- `{{now}}` ISO-8601 timestamp (evaluated at response time)
+- `{{increment}}` In-memory counter (increments per response, resets on process restart)
+
+No arguments, no nesting, no conditionals, no loops.
+
+### Escaping
+
+Use `\\{{...}}` to output a literal `{{...}}`.
+
+### Example: inline body templating
+
+```yaml
+respond:
+  status: 201
+  body:
+    id: "{{uuid}}"
+    createdAt: "{{now}}"
+    sequence: "{{increment}}"
+    note: "Literal: \\{{not-a-template}}"
+```
+
+### Example: bodyFile templating
+
+Scenario:
+
+```yaml
+respond:
+  status: 201
+  bodyFile: responses/templated_body.json
+```
+
+Response file (templates allowed inside JSON string values):
+
+```json
+{
+  "id": "{{uuid}}",
+  "createdAt": "{{now}}",
+  "sequence": "{{increment}}"
+}
+```
+
+### Validation rules
+
+- Templates are only allowed in `respond.body` and `respond.bodyFile` string values (including nested objects/arrays).
+- Templates are not allowed in status codes, headers, match rules, delays/timeouts, or paths/methods.
+- Unknown helpers, arguments, nesting, malformed syntax, or templates in non-string values fail validation before startup.
+
 ## Validation behavior (strict)
 
 Validation happens before any scenario execution. Invalid files fail fast with precise errors.
