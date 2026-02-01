@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { YAMLError, parseDocument } from 'yaml';
 import { ScenarioFile, ScenarioRule } from './types';
+import { validateTemplatesInBody, validateTemplatesNotAllowed } from '../templating/validation';
 
 export type ValidationSeverity = 'error' | 'warning';
 
@@ -348,6 +349,170 @@ const validateScenarioName = (name: string, filePath: string): ValidationError[]
   return errors;
 };
 
+const collectTemplateErrors = (
+  issues: Array<{ path: string; message: string }>,
+  errors: ValidationError[],
+  filePath: string,
+  ruleId?: string
+): void => {
+  for (const issue of issues) {
+    pushError(errors, filePath, issue.path, issue.message, 'error', undefined, undefined, ruleId);
+  }
+};
+
+const resolveBodyFilePath = (scenarioFilePath: string, bodyFile: string): string => {
+  if (path.isAbsolute(bodyFile)) {
+    return bodyFile;
+  }
+  return path.resolve(path.dirname(scenarioFilePath), bodyFile);
+};
+
+const readBodyFileValue = async (scenarioFilePath: string, bodyFile: string): Promise<unknown> => {
+  const fullPath = resolveBodyFilePath(scenarioFilePath, bodyFile);
+  const file = await fs.readFile(fullPath, 'utf-8');
+  try {
+    return JSON.parse(file);
+  } catch {
+    return file;
+  }
+};
+
+const validateScenarioTemplates = async (
+  scenario: ScenarioFile,
+  filePath: string
+): Promise<ValidationError[]> => {
+  const errors: ValidationError[] = [];
+
+  collectTemplateErrors(
+    validateTemplatesNotAllowed(scenario.scenario, 'scenario'),
+    errors,
+    filePath
+  );
+
+  if (scenario.description !== undefined) {
+    collectTemplateErrors(
+      validateTemplatesNotAllowed(scenario.description, 'description'),
+      errors,
+      filePath
+    );
+  }
+
+  if (scenario.version !== undefined) {
+    collectTemplateErrors(
+      validateTemplatesNotAllowed(scenario.version, 'version'),
+      errors,
+      filePath
+    );
+  }
+
+  for (const [index, rule] of scenario.rules.entries()) {
+    const basePath = `rules[${index}]`;
+    const ruleId = rule.id;
+
+    if (rule.id !== undefined) {
+      collectTemplateErrors(
+        validateTemplatesNotAllowed(rule.id, `${basePath}.id`),
+        errors,
+        filePath,
+        ruleId
+      );
+    }
+
+    collectTemplateErrors(
+      validateTemplatesNotAllowed(rule.match.path, `${basePath}.match.path`),
+      errors,
+      filePath,
+      ruleId
+    );
+
+    if (rule.match.method !== undefined) {
+      collectTemplateErrors(
+        validateTemplatesNotAllowed(rule.match.method, `${basePath}.match.method`),
+        errors,
+        filePath,
+        ruleId
+      );
+    }
+
+    if (rule.match.query !== undefined) {
+      for (const [key, value] of Object.entries(rule.match.query)) {
+        collectTemplateErrors(
+          validateTemplatesNotAllowed(value, `${basePath}.match.query.${key}`),
+          errors,
+          filePath,
+          ruleId
+        );
+      }
+    }
+
+    if (rule.match.headers !== undefined) {
+      for (const [key, value] of Object.entries(rule.match.headers)) {
+        if (value !== undefined && value !== null) {
+          collectTemplateErrors(
+            validateTemplatesNotAllowed(value, `${basePath}.match.headers.${key}`),
+            errors,
+            filePath,
+            ruleId
+          );
+        }
+      }
+    }
+
+    if (rule.respond.headers !== undefined) {
+      for (const [key, value] of Object.entries(rule.respond.headers)) {
+        collectTemplateErrors(
+          validateTemplatesNotAllowed(value, `${basePath}.respond.headers.${key}`),
+          errors,
+          filePath,
+          ruleId
+        );
+      }
+    }
+
+    if (rule.respond.bodyFile !== undefined) {
+      collectTemplateErrors(
+        validateTemplatesNotAllowed(rule.respond.bodyFile, `${basePath}.respond.bodyFile`),
+        errors,
+        filePath,
+        ruleId
+      );
+
+      try {
+        const bodyValue = await readBodyFileValue(filePath, rule.respond.bodyFile);
+        collectTemplateErrors(
+          validateTemplatesInBody(bodyValue, `${basePath}.respond.body`),
+          errors,
+          filePath,
+          ruleId
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        pushError(
+          errors,
+          filePath,
+          `${basePath}.respond.bodyFile`,
+          `bodyFile could not be read for template validation: ${message}`,
+          'error',
+          undefined,
+          undefined,
+          ruleId
+        );
+      }
+    }
+
+    if (rule.respond.body !== undefined) {
+      collectTemplateErrors(
+        validateTemplatesInBody(rule.respond.body, `${basePath}.respond.body`),
+        errors,
+        filePath,
+        ruleId
+      );
+    }
+  }
+
+  return errors;
+};
+
 export const validateScenarioFile = async (filePath: string): Promise<ValidationResult> => {
   const content = await fs.readFile(filePath, 'utf-8');
   const parseResult = parseYamlStrict(filePath, content);
@@ -367,8 +532,9 @@ export const validateScenarioFile = async (filePath: string): Promise<Validation
   const ruleErrors = data.rules.flatMap((rule, index) => validateRule(rule, filePath, index));
   const idErrors = validateRuleIds(data.rules, filePath);
   const nameErrors = validateScenarioName(data.scenario, filePath);
+  const templateErrors = await validateScenarioTemplates(data, filePath);
 
-  errors.push(...ruleErrors, ...idErrors, ...nameErrors);
+  errors.push(...ruleErrors, ...idErrors, ...nameErrors, ...templateErrors);
 
   if (errors.some((entry) => entry.severity === 'error')) {
     return { errors };

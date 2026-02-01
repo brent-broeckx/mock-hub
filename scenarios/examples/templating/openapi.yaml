@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Mock Hub Template Demo API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4010
+paths:
+  /events:
+    post:
+      summary: Create a templated event
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  sequence:
+                    type: string
+                  meta:
+                    type: object
+                    properties:
+                      requestId:
+                        type: string
+                      note:
+                        type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        itemId:
+                          type: string
+                        observedAt:
+                          type: string
+                          format: date-time
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time

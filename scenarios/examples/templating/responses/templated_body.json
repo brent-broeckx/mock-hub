@@ -1,0 +1,19 @@
+{
+  "id": "{{uuid}}",
+  "createdAt": "{{now}}",
+  "sequence": "{{increment}}",
+  "meta": {
+    "requestId": "{{uuid}}",
+    "note": "Literal example bodyFile: \\{{not-a-template}}"
+  },
+  "items": [
+    {
+      "itemId": "{{uuid}}",
+      "observedAt": "{{now}}"
+    },
+    {
+      "itemId": "{{uuid}}",
+      "observedAt": "{{now}}"
+    }
+  ]
+}
