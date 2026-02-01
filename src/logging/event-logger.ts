@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import type { TemplateHelperName } from '../templating/types';
 
 export type LogMode = 'ci' | 'cli' | 'ui';
 
@@ -75,6 +76,13 @@ export type LogEvent =
       event: 'execution-complete';
       source: 'scenario' | 'auto-gen' | 'happy-path' | 'timeout';
       status: number;
+    }
+  | {
+      event: 'templates-applied';
+      scenarioId: string;
+      ruleIndex: number;
+      ruleId?: string;
+      helpers: TemplateHelperName[];
     }
   | {
       event: 'server-ready';
@@ -217,6 +225,14 @@ export const createEventLogger = ({ mode, stream, format }: EventLoggerOptions):
           '▶ Execution complete',
           ` ○ source=${event.source}`,
           ` ○ status=${event.status}`,
+        ].map(colorizeLine).join('\n');
+      case 'templates-applied':
+        return [
+          '▶ Templates applied',
+          ` ○ scenario=${event.scenarioId}`,
+          ` ○ ruleIndex=${event.ruleIndex}`,
+          ` ○ ruleId=${event.ruleId ?? 'none'}`,
+          ` ○ helpers=${event.helpers.join(', ')}`,
         ].map(colorizeLine).join('\n');
       case 'server-ready':
         return [

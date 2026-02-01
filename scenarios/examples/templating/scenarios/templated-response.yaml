@@ -1,0 +1,31 @@
+scenario: TemplatedResponses
+version: 1.0.0
+description: Demonstrates constrained response templating in scenario responses
+rules:
+  - id: events-201
+    match:
+      path: /events
+      method: POST
+    respond:
+      status: 201
+      body:
+        id: "{{uuid}}"
+        createdAt: "{{now}}"
+        sequence: "{{increment}}"
+        meta:
+          requestId: "{{uuid}}"
+          note: "Literal example: \\{{not-a-template}}"
+        items:
+          - itemId: "{{uuid}}"
+            observedAt: "{{now}}"
+          - itemId: "{{uuid}}"
+            observedAt: "{{now}}"
+  - id: events-201-bodyfile
+    match:
+      path: /events
+      method: POST
+      query:
+        source: bodyfile
+    respond:
+      status: 201
+      bodyFile: ../responses/templated_body.json

@@ -8,6 +8,8 @@ import { ScenarioState } from '../state/scenario-state';
 import { resolveFrom } from '../utils/path';
 import { sleep } from '../utils/sleep';
 import { EventLogger } from '../logging/event-logger';
+import { createTemplateRuntime, renderTemplates } from '../templating';
+import type { TemplateRuntime } from '../templating/types';
 
 export type ServerOptions = {
   routes: ApiRoute[];
@@ -49,6 +51,15 @@ const buildScenarioMap = (scenarios: LoadedScenario[]): Map<string, LoadedScenar
 export const createServer = (options: ServerOptions): FastifyInstance => {
   const server = Fastify({ logger: false });
   const scenarioMap = buildScenarioMap(options.scenarios);
+  const templateRuntimes = new Map<string, TemplateRuntime>();
+
+  const getTemplateRuntime = (scenarioId: string): TemplateRuntime => {
+    const current = templateRuntimes.get(scenarioId);
+    if (current) return current;
+    const created = createTemplateRuntime();
+    templateRuntimes.set(scenarioId, created);
+    return created;
+  };
 
   const handleRequest = async (
     request: FastifyRequest,
@@ -127,9 +138,25 @@ export const createServer = (options: ServerOptions): FastifyInstance => {
           await sleep(respond.delayMs);
         }
 
-        const body = respond.bodyFile
+        let body = respond.bodyFile
           ? await readBodyFile(loadedScenario.sourceDir, respond.bodyFile)
           : respond.body;
+
+        if (body !== undefined) {
+          const runtime = getTemplateRuntime(loadedScenario.scenario);
+          const rendered = renderTemplates(body, runtime);
+          body = rendered.value;
+
+          if (rendered.helpers.length > 0) {
+            options.eventLogger.emitEvent({
+              event: 'templates-applied',
+              scenarioId: loadedScenario.scenario,
+              ruleIndex: match.ruleIndex,
+              ruleId: match.rule.id,
+              helpers: rendered.helpers,
+            });
+          }
+        }
 
         if (respond.headers) {
           Object.entries(respond.headers).forEach(([key, value]) => reply.header(key, value));
