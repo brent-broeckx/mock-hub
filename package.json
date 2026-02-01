@@ -1,6 +1,6 @@
 {
   "name": "@brentbroeckx/mock-hub",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Integration Mock Hub - OpenAPI-driven mock server",
   "type": "module",
   "bin": {
@@ -41,7 +41,7 @@
   "scripts": {
     "build": "tsup",
     "prepack": "npm run build",
-    "dev": "tsx src/cli/index.ts run --help",
+    "dev": "tsx src/cli/index.ts run --spec ./scenarios/examples/templating/openapi.yaml --source ./scenarios/examples/templating/scenarios --ui --logging",
     "start": "node dist/cli.js run --spec ./scenarios/examples/default/openapi.yaml --source ./scenarios/examples/default/scenarios --scenario PartnerDown --ui --logging"
   },
   "dependencies": {
