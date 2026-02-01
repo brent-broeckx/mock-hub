@@ -8,8 +8,9 @@
       "runtimeArgs": ["--inspect"],
       "runtimeExecutable": "node",
       "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
-      "args": ["src/cli/index.ts", "run", "--spec", "openapi.yaml", "--source", "scenarios"],
+      "args": ["src/cli/index.ts", "run", "--spec", "./scenarios/examples/templating/openapi.yaml", "--source", "./scenarios/examples/templating/scenarios", "--scenario", "TemplatedResponses", "--ui"],
       "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"]
     }
   ]
