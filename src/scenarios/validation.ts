@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import * as YAML from 'yaml';
+import { YAMLError, parseDocument } from 'yaml';
 import { ScenarioFile, ScenarioRule } from './types';
 
 export type ValidationSeverity = 'error' | 'warning';
@@ -54,7 +54,7 @@ const pushError = (
   errors.push({ file, path: pathKey, message, severity, line, column, ruleId });
 };
 
-const extractLineInfo = (error: YAML.YAMLError): { line?: number; column?: number } => {
+const extractLineInfo = (error: YAMLError): { line?: number; column?: number } => {
   const linePos = (error as unknown as { linePos?: Array<{ line: number; col: number }> })
     .linePos;
   if (!linePos || linePos.length === 0) return {};
@@ -62,7 +62,7 @@ const extractLineInfo = (error: YAML.YAMLError): { line?: number; column?: numbe
 };
 
 const parseYamlStrict = (filePath: string, content: string): { data?: unknown; errors: ValidationError[] } => {
-  const doc = YAML.parseDocument(content, {
+  const doc = parseDocument(content, {
     prettyErrors: true,
     uniqueKeys: true,
   });
