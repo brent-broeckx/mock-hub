@@ -61,6 +61,9 @@ const pickExample = (content?: OpenAPIV3.MediaTypeObject): unknown => {
 const generateFromSchema = (schema?: OpenAPIV3.SchemaObject | OpenAPIV3.ReferenceObject): unknown => {
   if (!schema || ('$ref' in schema)) return undefined;
   try {
+    JSONSchemaFaker.option({
+      alwaysFakeOptionals: true,
+    });
     return JSONSchemaFaker.generate(schema);
   } catch {
     return undefined;
