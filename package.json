@@ -46,7 +46,6 @@
   },
   "dependencies": {
     "commander": "^12.1.0",
-    "debug": "^4.3.7",
     "fastify": "^4.26.2",
     "ink": "^5.0.1",
     "ink-select-input": "^6.0.0",
