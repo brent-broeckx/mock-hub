@@ -124,6 +124,29 @@ const queryMismatchReason = (match: ScenarioMatch, query: RequestContext['query'
   return undefined;
 };
 
+const scoreMatchSpecificity = (match: ScenarioMatch): number => {
+  let score = 0;
+
+  if (match.path) {
+    score += match.path.includes('*') ? 1 : 10;
+    score += match.path.split('/').filter(Boolean).length;
+  }
+
+  if (match.method) {
+    score += 5;
+  }
+
+  if (match.headers) {
+    score += Object.keys(match.headers).length * 2;
+  }
+
+  if (match.query) {
+    score += Object.keys(match.query).length * 3;
+  }
+
+  return score;
+};
+
 const evaluateRule = (rule: ScenarioRule, request: RequestContext): RuleEvaluation => {
   const { match } = rule;
 
@@ -168,14 +191,23 @@ export const findMatchingRule = (
   request: RequestContext,
   observer?: RuleEvaluationObserver
 ): MatchingRule | undefined => {
+  let bestMatch: MatchingRule | undefined;
+  let bestScore = -1;
+
   for (const [index, rule] of rules.entries()) {
     const result = evaluateRule(rule, request);
     observer?.({ rule, ruleIndex: index, result });
 
-    if (result.matched) {
-      return { rule, ruleIndex: index };
+    if (!result.matched) {
+      continue;
+    }
+
+    const score = scoreMatchSpecificity(rule.match);
+    if (score > bestScore) {
+      bestMatch = { rule, ruleIndex: index };
+      bestScore = score;
     }
   }
 
-  return undefined;
+  return bestMatch;
 };
