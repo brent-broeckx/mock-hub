@@ -61,11 +61,57 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --logging
 ```
 
-CI usage:
+## CI Usage
+
+Use the mock server in CI to make integration points deterministic, fast, and isolated from external system availability.
+
+### Typical CI Flow
+
+- Start the mock server on a known port with a fixed scenario and deterministic logging.
+- Run your test suite against `http://localhost:<port>`.
+- Let the pipeline cleanly shut down the server after tests complete.
+
+### Example: Backend Integration Tests
 
 ```bash
-CI=1 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --show-log
+CI=1 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown --port 4010 --logging
+
+BASE_URL=http://localhost:4010 npm test
+
+# Force a single request via header (override for one call in your tests)
+curl -s -H "X-MockHub-Scenario: PartnerDown" http://localhost:4010/contracts >/dev/null
 ```
+
+### Example: Frontend E2E Tests
+
+```bash
+CI=1 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario HappyPath --port 4010 --logging
+
+BASE_URL=http://localhost:4010 npx playwright test
+```
+
+### Example: Forcing Error Scenarios
+
+```bash
+CI=1 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown --port 4010 --logging
+
+# Validate 503 handling
+curl -i -H "X-MockHub-Scenario: PartnerDown" http://localhost:4010/contracts
+
+# Validate 500 handling using another scenario
+curl -i -H "X-MockHub-Scenario: PaymentFailed" http://localhost:4010/payments
+```
+
+### Notes on Determinism
+
+- Same input $\rightarrow$ same output.
+- No random behavior or time‑dependent responses.
+- Safe to run in parallel CI jobs when using unique ports per job.
+
+### What Not to Use in CI
+
+- UI mode (`--ui`): requires interactive terminals and is non‑deterministic for automation.
+- Interactive scenario switching: can introduce state drift across parallel jobs.
 
 ## Scenario file example
 
