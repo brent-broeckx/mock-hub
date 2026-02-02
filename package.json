@@ -42,7 +42,9 @@
     "build": "tsup",
     "prepack": "npm run build",
     "dev": "tsx src/cli/index.ts run --spec ./scenarios/examples/templating/openapi.yaml --source ./scenarios/examples/templating/scenarios --ui --logging",
-    "start": "node dist/cli.js run --spec ./scenarios/examples/default/openapi.yaml --source ./scenarios/examples/default/scenarios --scenario PartnerDown --ui --logging"
+    "start": "node dist/cli.js run --spec ./scenarios/examples/default/openapi.yaml --source ./scenarios/examples/default/scenarios --scenario PartnerDown --ui --logging",
+    "test": "vitest",
+    "test:ci": "npm run build && vitest run --reporter=verbose --no-watch --coverage=false"
   },
   "dependencies": {
     "commander": "^12.1.0",
@@ -59,8 +61,11 @@
     "@types/debug": "^4.1.12",
     "@types/node": "^20.11.30",
     "@types/react": "^18.2.70",
+    "execa": "^8.0.1",
+    "memfs": "^4.17.0",
     "tsup": "^8.1.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }
