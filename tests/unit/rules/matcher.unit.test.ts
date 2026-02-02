@@ -52,5 +52,28 @@ describe("rules", () => {
 
       expect(match?.rule.id).toBe("rule-1");
     });
+
+    it("should prefer more specific query match", () => {
+      const match = findMatchingRule(
+        [
+          rule({
+            id: "less-specific",
+            match: { path: "/contracts", method: "GET" },
+          }),
+          rule({
+            id: "more-specific",
+            match: { path: "/contracts", method: "GET", query: { dryRun: "true" } },
+          }),
+        ],
+        {
+          method: "GET",
+          path: "/contracts",
+          headers: {},
+          query: { dryRun: "true" },
+        }
+      );
+
+      expect(match?.rule.id).toBe("more-specific");
+    });
   });
 });
