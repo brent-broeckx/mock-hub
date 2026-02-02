@@ -2,6 +2,8 @@
 
 OpenAPI-first mock server with deterministic scenario overrides and strict validation.
 
+![mock-hub demo](https://raw.githubusercontent.com/brent-broeckx/mock-hub/refs/heads/main/assets/cli-mock-hub-example.gif)
+
 ## Install
 
 ```bash
@@ -118,7 +120,7 @@ curl -i -H "X-MockHub-Scenario: PaymentFailed" http://localhost:4010/payments
 
 ## Scenario file example
 
-Save as [scenarios/partner-down.yaml](scenarios/partner-down.yaml):
+Save as [scenarios/examples/default/scenarios/partner-down.yaml](scenarios/examples/default/scenarios/partner-down.yaml):
 
 ```yaml
 scenario: PartnerDown
@@ -149,6 +151,8 @@ rules:
         error: "Dry-run validation failed"
         code: "VALIDATION_ERROR"
 ```
+
+For more examples take a look at: [Mock-hub Scenario examples](https://github.com/brent-broeckx/mock-hub/tree/main/scenarios/examples):
 
 ## Header override
 
@@ -274,9 +278,3 @@ ERROR scenarios/auth.yaml:12:4
 ├── scenarios
 └── openapi.yaml
 ```
-
-## Publishing
-
-- Builds output to `dist/` only
-- Uses ESM with Node >= 18.
-- `bin` points to `dist/cli.js` for `npx` and global usage.
