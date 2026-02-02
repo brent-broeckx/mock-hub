@@ -24,10 +24,12 @@ mock-hub run --spec ./openapi.yaml --source ./scenarios
 ## Quick start
 
 1. Create an OpenAPI spec (example: [openapi.yaml](scenarios/examples/default/openapi.yaml)).
-2. Create a scenarios directory (example: [scenarios](scenarios)).
+2. (optional) Create a scenarios directory (example: [scenarios](scenarios)).
 3. Run the server:
 
 ```bash
+npx mock-hub run --spec ./openapi.yaml
+or
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 ```
 
@@ -55,6 +57,7 @@ mock-hub run --help
 ### Examples
 
 ```bash
+npx mock-hub run --spec ./openapi.yaml
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
