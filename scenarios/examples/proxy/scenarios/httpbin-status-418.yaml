@@ -1,0 +1,9 @@
+scenario: HttpbinProxyStatus418
+description: Override /get status to 418 (proxy body preserved)
+rules:
+  - id: get-status-418
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 418

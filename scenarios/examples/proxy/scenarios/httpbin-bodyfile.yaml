@@ -1,0 +1,10 @@
+scenario: HttpbinProxyBodyFile
+description: Replace /get response body with a file (no proxy)
+rules:
+  - id: get-body-file
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 200
+      bodyFile: ../responses/httpbin_body.json

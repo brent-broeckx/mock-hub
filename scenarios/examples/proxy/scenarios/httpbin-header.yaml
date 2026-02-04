@@ -1,0 +1,11 @@
+scenario: HttpbinProxyHeader
+description: Add a response header to /get (proxy body preserved)
+rules:
+  - id: get-add-header
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 200
+      headers:
+        X-MockHub-Proxy: "header-added"

@@ -1,0 +1,10 @@
+scenario: HttpbinProxyDelay
+description: Delay /get response after proxy returns
+rules:
+  - id: get-delay
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 200
+      delayMs: 750

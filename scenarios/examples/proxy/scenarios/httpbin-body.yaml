@@ -1,0 +1,13 @@
+scenario: HttpbinProxyBody
+description: Replace /get response body with inline mock body (no proxy)
+rules:
+  - id: get-body-inline
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 200
+      body:
+        source: "mockhub"
+        mode: "body"
+        message: "Inline body replaces proxy response"

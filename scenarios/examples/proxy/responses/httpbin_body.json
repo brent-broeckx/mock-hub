@@ -1,0 +1,6 @@
+{
+  "source": "mock-hub",
+  "mode": "bodyfile",
+  "message": "Body file replaces proxy response",
+  "note": "Note from mock-hub"
+}
