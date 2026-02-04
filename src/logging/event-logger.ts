@@ -7,10 +7,11 @@ export type LogEvent =
   | {
       event: 'startup';
       mode: LogMode;
-      spec: string;
+      spec?: string;
       sourceDir?: string;
       ui: boolean;
       port: number;
+      proxyBaseUrl?: string;
     }
   | {
       event: 'startup-failed';
@@ -74,8 +75,20 @@ export type LogEvent =
     }
   | {
       event: 'execution-complete';
-      source: 'scenario' | 'auto-gen' | 'happy-path' | 'timeout';
+      source: 'scenario' | 'auto-gen' | 'happy-path' | 'timeout' | 'proxy';
       status: number;
+    }
+  | {
+      event: 'proxy-action';
+      result: 'matched' | 'not-matched';
+      action: 'proxy' | 'mock';
+      scenarioId?: string;
+      ruleIndex?: number;
+      ruleId?: string;
+      delayMs?: number;
+      timeout?: number;
+      status?: number;
+      targetUrl?: string;
     }
   | {
       event: 'templates-applied';
@@ -161,10 +174,11 @@ export const createEventLogger = ({ mode, stream, format }: EventLoggerOptions):
         return [
           '▶ Startup',
           ` ○ mode=${event.mode}`,
-          ` ○ spec=${event.spec}`,
+          ` ○ spec=${event.spec ?? 'none'}`,
           ` ○ source=${event.sourceDir ?? 'none'}`,
           ` ○ ui=${event.ui}`,
           ` ○ port=${event.port}`,
+          ` ○ proxy=${event.proxyBaseUrl ?? 'none'}`,
         ].map(colorizeLine).join('\n');
       case 'startup-failed':
         return [
@@ -226,6 +240,41 @@ export const createEventLogger = ({ mode, stream, format }: EventLoggerOptions):
           ` ○ source=${event.source}`,
           ` ○ status=${event.status}`,
         ].map(colorizeLine).join('\n');
+      case 'proxy-action': {
+        if (event.result === 'not-matched' && event.action === 'proxy') {
+          return [
+            '▶ NO MATCH → PROXY',
+            ` ○ target=${event.targetUrl ?? 'unknown'}`,
+          ].map(colorizeLine).join('\n');
+        }
+
+        const ruleLabel = event.ruleId ?? (event.ruleIndex !== undefined ? `#${event.ruleIndex}` : 'unknown');
+        const base = event.action === 'proxy'
+          ? `▶ MATCH rule=${ruleLabel} → PROXY`
+          : `▶ MATCH rule=${ruleLabel} → MOCK`;
+        const details: string[] = [];
+
+        if (event.delayMs !== undefined) {
+          details.push(`delay=${event.delayMs}ms`);
+        }
+
+        if (event.timeout !== undefined) {
+          details.push(`timeout=${event.timeout}ms`);
+        }
+
+        if (event.status !== undefined) {
+          details.push(`status=${event.status}`);
+        }
+
+        if (details.length === 0) {
+          return [base].map(colorizeLine).join('\n');
+        }
+
+        return [
+          base,
+          ` ○ ${details.join(' + ')}`,
+        ].map(colorizeLine).join('\n');
+      }
       case 'templates-applied':
         return [
           '▶ Templates applied',

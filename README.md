@@ -1,6 +1,6 @@
 # Integration Mock Hub
 
-OpenAPI-first mock server with deterministic scenario overrides and strict validation.
+OpenAPI-first mock server with deterministic scenario overrides and strict validation. Also supports proxy mode to intercept real backends.
 
 ![mock-hub demo](https://raw.githubusercontent.com/brent-broeckx/mock-hub/refs/heads/main/assets/cli-mock-hub-example.gif)
 
@@ -33,12 +33,15 @@ mock-hub run --spec ./openapi.yaml --source ./scenarios
 npx mock-hub run --spec ./openapi.yaml
 or
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios
+
+# Proxy mode (spec optional)
+npx mock-hub run --proxy http://localhost:8080 --source ./scenarios
 ```
 
 ## CLI usage
 
 ```bash
-mock-hub run --spec <path> [--source <dir>] [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
+mock-hub run [--spec <path>] [--proxy <baseUrl>] [--source <dir>] [--scenario <name>] [--ui] [--logging] [--port <number>] [--verbose]
 ```
 
 Help:
@@ -49,7 +52,8 @@ mock-hub run --help
 
 ### CLI options
 
-- `--spec <path>`: Path to OpenAPI spec (YAML or JSON). Required.
+- `--spec <path>`: Path to OpenAPI spec (YAML or JSON). Required unless `--proxy` is used.
+- `--proxy <baseUrl>`: Enable proxy mode. For unmatched requests, forward to the real backend. Spec is optional in proxy mode.
 - `--source <dir>`: Directory containing `.yaml` scenario files. Optional; if omitted, happy-path responses are used.
 - `--scenario <name>`: Default scenario name to apply when no header override is provided.
 - `--ui`: Launch interactive scenario selector (Ink).
@@ -64,6 +68,8 @@ npx mock-hub run --spec ./openapi.yaml --source ./scenarios
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --ui
 npx mock-hub run --spec ./openapi.yaml --source ./scenarios --logging
+npx mock-hub run --proxy http://localhost:8080 --source ./scenarios
+npx mock-hub run --proxy http://localhost:8080 --source ./scenarios --scenario RateLimited
 ```
 
 ## CI Usage
@@ -117,6 +123,23 @@ curl -i -H "X-MockHub-Scenario: PaymentFailed" http://localhost:4010/payments
 
 - UI mode (`--ui`): requires interactive terminals and is non‑deterministic for automation.
 - Interactive scenario switching: can introduce state drift across parallel jobs.
+
+## Proxy mode
+
+Proxy mode lets Mock Hub act as a selective interception proxy. By default, requests are forwarded to the real backend. Scenario rules can override or transform responses without changing your client code. Use this to validate error handling, latency, or headers while still hitting the real service.
+
+Resolution order in proxy mode:
+
+1. Scenario match → scenario logic applies
+2. No match → forward to `--proxy <baseUrl>`
+
+Notes:
+
+- If a scenario rule defines `body` or `bodyFile`, the response is fully mocked (no proxy).
+- If a rule defines only overrides (status/headers/delay/timeout), the response is proxied and then transformed. The body of the original request is kept when present.
+- Happy-path OpenAPI mocks are disabled in proxy mode.
+
+Proxy examples are available in [scenarios/examples/proxy/scenarios](scenarios/examples/proxy/scenarios).
 
 ## Scenario file example
 

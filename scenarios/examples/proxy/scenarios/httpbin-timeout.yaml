@@ -1,0 +1,10 @@
+scenario: HttpbinProxyTimeout
+description: Force proxy timeout for /get
+rules:
+  - id: get-timeout
+    match:
+      path: /get
+      method: GET
+    respond:
+      status: 200
+      timeout: 1

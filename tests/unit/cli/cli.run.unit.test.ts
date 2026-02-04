@@ -122,4 +122,54 @@ describe("cli", () => {
     expect(callArgs?.scenarioState).toBe(lastState);
     expect(callArgs?.port).toBe(4010);
   });
+
+  it("should allow startup without --spec when --proxy is provided", async () => {
+    process.argv = [
+      "node",
+      "mock-hub",
+      "run",
+      "--proxy",
+      "http://localhost:8080",
+    ];
+
+    const parser = await import("../../../src/openapi/parser");
+    const loader = await import("../../../src/scenarios/loader");
+    const server = await import("../../../src/server/server");
+
+    vi.mocked(parser.loadOpenApiSpec).mockResolvedValue(spec);
+    vi.mocked(parser.extractRoutes).mockReturnValue(routes);
+    vi.mocked(loader.loadScenarios).mockResolvedValue(scenarios);
+
+    await import("../../../src/cli/index");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(parser.loadOpenApiSpec).not.toHaveBeenCalled();
+    expect(parser.extractRoutes).not.toHaveBeenCalled();
+
+    const callArgs = vi.mocked(server.startServer).mock.calls[0]?.[0];
+    expect(callArgs?.proxyBaseUrl).toBe("http://localhost:8080");
+    expect(callArgs?.routes).toEqual([]);
+  });
+
+  it("should fail fast when neither --spec nor --proxy is provided", async () => {
+    process.argv = [
+      "node",
+      "mock-hub",
+      "run",
+    ];
+
+    const server = await import("../../../src/server/server");
+    const logger = await import("../../../src/logging/event-logger");
+
+    await import("../../../src/cli/index");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(vi.mocked(server.startServer)).not.toHaveBeenCalled();
+    expect(vi.mocked(logger.createNullEventLogger)().emitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "startup-failed",
+        message: "OpenAPI spec is required when not using --proxy",
+      })
+    );
+  });
 });

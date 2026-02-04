@@ -1,0 +1,11 @@
+scenario: HttpbinProxyStatusOverride
+description: Override /status/* response code and add header
+rules:
+  - id: status-override
+    match:
+      path: /status/*
+      method: GET
+    respond:
+      status: 204
+      headers:
+        X-MockHub-Proxy: "status-overridden"

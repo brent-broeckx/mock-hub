@@ -17,45 +17,56 @@ program
 program
   .command('run')
   .description('Start the mock server')
-  .requiredOption('--spec <path>', 'Path to OpenAPI spec (json/yaml)')
+  .option('--spec <path>', 'Path to OpenAPI spec (json/yaml)')
   .option('--source <dir>', 'Directory containing .yaml scenario files')
   .option('--scenario <name>', 'Active scenario name')
   .option('--ui', 'Interactive scenario selector', false)
   .option('--logging', 'Emit deterministic logs', false)
   .option('--port <number>', 'Server port', '4010')
+  .option('--proxy <baseUrl>', 'Proxy base URL for unmatched requests')
   .addHelpText(
     'after',
     `\nExamples:\n  mock-hub run --spec ./openapi.yaml\n  mock-hub run --spec ./openapi.yaml --source ./scenarios\n  mock-hub run --spec ./openapi.yaml --source ./scenarios --scenario PartnerDown\n  mock-hub run --spec ./openapi.yaml --source ./scenarios --ui\n`
   )
   .action(
     async (options: {
-      spec: string;
+      spec?: string;
       source?: string;
       scenario?: string;
       ui?: boolean;
       showLog?: boolean;
       logging?: boolean;
       port?: string;
+      proxy?: string;
     }) => {
     const port = Number(options.port);
     const mode: LogMode = options.ui ? 'ui' : process.env.CI ? 'ci' : 'cli';
+    const proxyBaseUrl = options.proxy?.trim() || undefined;
+    const specPath = options.spec?.trim() || undefined;
+    // Resolve run mode before loading any files. Spec is optional only in proxy mode.
+    const runMode = proxyBaseUrl ? 'proxy' : 'mock';
     const shouldLog = Boolean(options.showLog || options.logging);
     const eventLogger = shouldLog
       ? createEventLogger({ mode, format: mode === 'ci' ? 'jsonl' : 'pretty' })
       : createNullEventLogger();
 
     try {
-      const spec = await loadOpenApiSpec(options.spec);
-      const routes = extractRoutes(spec);
+      if (runMode === 'mock' && !specPath) {
+        throw new Error('OpenAPI spec is required when not using --proxy');
+      }
+
+      const spec = specPath ? await loadOpenApiSpec(specPath) : undefined;
+      const routes = spec ? extractRoutes(spec) : [];
       const scenarios = await loadScenarios(options.source, eventLogger);
 
       eventLogger.emitEvent({
         event: 'startup',
         mode,
-        spec: options.spec,
+        spec: specPath,
         sourceDir: options.source,
         ui: Boolean(options.ui),
         port,
+        proxyBaseUrl,
       });
 
       const scenarioState = new ScenarioState();
@@ -75,6 +86,7 @@ program
         scenarioState,
         port,
         eventLogger,
+        proxyBaseUrl,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown startup error';

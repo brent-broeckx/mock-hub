@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createServer } from "../../../src/server/server";
 import { ScenarioState } from "../../../src/state/scenario-state";
 import { createNullEventLogger } from "../../../src/logging/event-logger";
@@ -132,6 +132,128 @@ describe("server", () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ ok: true });
+      await server.close();
+    });
+  });
+
+  describe("proxy", () => {
+    const proxyBaseUrl = "http://localhost:8080";
+    const makeResponse = (status: number, headers: Record<string, string>, body: string) =>
+      ({
+        status,
+        headers: new Headers(headers),
+        arrayBuffer: async () => new TextEncoder().encode(body).buffer,
+      }) as unknown as Response;
+
+    beforeEach(() => {
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it("should proxy instead of happy-path when proxy enabled", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        makeResponse(200, { "content-type": "application/json" }, "{\"proxied\":true}")
+      );
+
+      const server = createServer({
+        routes,
+        scenarios: [],
+        scenarioState: new ScenarioState(),
+        port: 0,
+        eventLogger: createNullEventLogger(),
+        proxyBaseUrl,
+      });
+
+      const response = await server.inject({
+        method: "GET",
+        url: "/contracts",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toBe("{\"proxied\":true}");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await server.close();
+    });
+
+    it("should apply scenario overrides on proxied responses", async () => {
+      const fetchMock = vi.mocked(fetch);
+      fetchMock.mockResolvedValueOnce(
+        makeResponse(
+          200,
+          { "content-type": "application/json", "x-rate-limit": "0" },
+          "{\"ok\":true}"
+        )
+      );
+
+      const scenarios: LoadedScenario[] = [
+        {
+          scenario: "RateLimited",
+          version: "1.0.0",
+          rules: [
+            {
+              id: "rate-limit",
+              match: { path: "/contracts", method: "GET" },
+              respond: {
+                status: 429,
+                headers: { "x-rate-limit": "1" },
+              },
+            },
+          ],
+          sourcePath: "/scenarios/rate-limit.yaml",
+          sourceDir: "/scenarios",
+        },
+      ];
+
+      const state = new ScenarioState();
+      state.set("RateLimited");
+
+      const server = createServer({
+        routes,
+        scenarios,
+        scenarioState: state,
+        port: 0,
+        eventLogger: createNullEventLogger(),
+        proxyBaseUrl,
+      });
+
+      const response = await server.inject({
+        method: "GET",
+        url: "/contracts",
+      });
+
+      expect(response.statusCode).toBe(429);
+      expect(response.headers["x-rate-limit"]).toBe("1");
+      expect(response.headers["content-type"]).toContain("application/json");
+      expect(response.body).toBe("{\"ok\":true}");
+      await server.close();
+    });
+
+    it("should bypass proxy when auto-gen scenario is active", async () => {
+      const fetchMock = vi.mocked(fetch);
+      const state = new ScenarioState();
+      state.set("auto-gen-500");
+
+      const server = createServer({
+        routes,
+        scenarios: [],
+        scenarioState: state,
+        port: 0,
+        eventLogger: createNullEventLogger(),
+        proxyBaseUrl,
+      });
+
+      const response = await server.inject({
+        method: "GET",
+        url: "/contracts",
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(fetchMock).not.toHaveBeenCalled();
       await server.close();
     });
   });
