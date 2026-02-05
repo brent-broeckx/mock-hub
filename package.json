@@ -1,6 +1,6 @@
 {
   "name": "@brentbroeckx/mock-hub",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Integration Mock Hub - OpenAPI-driven mock server",
   "type": "module",
   "bin": {
